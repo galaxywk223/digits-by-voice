@@ -8,8 +8,7 @@ set -euo pipefail
 #
 # Usage examples:
 #   bash bootstrap.sh menu
-#   bash bootstrap.sh all
-#   bash bootstrap.sh recognize-3 -- --max-seconds 5
+#   bash bootstrap.sh recognize-3 -- --utterance-manual --decode dtw
 #   bash bootstrap.sh --venv .venv2 train
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -24,7 +23,7 @@ EXTRA_ARGS=()
 
 usage() {
   cat <<EOF
-Usage: bash bootstrap.sh [OPTIONS] [menu|record-templates|train|recognize-3|all] [-- ARGS]
+Usage: bash bootstrap.sh [OPTIONS] [menu|record-templates|record-digit|train|recognize-1|recognize-3] [-- ARGS]
 
 Options:
   --venv DIR         Virtualenv directory (default: .venv)
@@ -32,8 +31,7 @@ Options:
 
 Examples:
   bash bootstrap.sh menu
-  bash bootstrap.sh all
-  bash bootstrap.sh recognize-3 -- --max-seconds 5
+  bash bootstrap.sh recognize-3 -- --utterance-manual --decode dtw
   bash bootstrap.sh --venv .venv2 train
 EOF
 }
@@ -45,7 +43,7 @@ while [[ $# -gt 0 ]]; do
       VENV_DIR="$2"; shift 2 ;;
     --skip-install)
       SKIP_INSTALL=1; shift ;;
-    menu|record-templates|train|recognize-3|all)
+    menu|record-templates|record-digit|train|recognize-1|recognize-3)
       MODE="$1"; shift ;;
     --)
       shift
@@ -91,21 +89,57 @@ case "$MODE" in
   menu)
     while true; do
       echo
-      echo "== Voice Digits =="
-      echo "1) 录制模板 (0-9)"
-      echo "2) 训练模型"
-      echo "3) 连续三位识别"
-      echo "4) 一键 (1 -> 2 -> 3)"
+      echo "== 语音数字识别 =="
+      echo "1) 录制模板 0-9（手动开始/结束）"
+      echo "2) 录制某一数字（手动，增量样本）"
+      echo "3) 训练模型"
+      echo "4) 一次性读三位（手动，DTW 模式）"
+      echo "5) 单位识别（手动）"
       echo "q) 退出"
       read -rp "选择: " choice
       case "$choice" in
-        1) run_app record-templates --count 3 --sr 16000 --duration 1.0 ;;
-        2) run_app train ;;
-        3) run_app recognize-3 --sr 16000 --max-seconds 5 ;;
+        1) run_app record-templates --count 3 --sr 16000 ;;
+        2)
+          read -rp "输入要录制的数字(0-9): " digit
+          if [[ ! "$digit" =~ ^[0-9]$ ]]; then echo "无效数字"; continue; fi
+          read -rp "录制次数(默认3): " cnt; cnt=${cnt:-3}
+          while true; do
+            run_app record-digit --digit "$digit" --count "$cnt" --sr 16000
+            read -rp "是否继续为该数字追加样本？[y/N]: " yn
+            case "$yn" in
+              y|Y) ;;
+              *) break ;;
+            esac
+          done
+          read -rp "是否现在训练模型？[y/N]: " yn
+          case "$yn" in
+            y|Y) run_app train ;;
+            *) : ;;
+          esac
+          ;;
+        3) run_app train ;;
         4)
-          run_app record-templates --count 3 --sr 16000 --duration 1.0 && \
-          run_app train && \
-          run_app recognize-3 --sr 16000 --max-seconds 5 ;;
+          while true; do
+            echo "按回车开始，一次性读出三个数字，读完再按回车结束…"
+            run_app recognize-3 --sr 16000 --utterance-manual --decode dtw
+            read -rp "继续识别该模式？[y/N]: " yn
+            case "$yn" in
+              y|Y) ;;
+              *) break ;;
+            esac
+          done
+          ;;
+        5)
+          while true; do
+            echo "按回车开始，说出一个数字，读完再按回车结束…"
+            run_app recognize-1 --sr 16000 --manual
+            read -rp "继续识别该模式？[y/N]: " yn
+            case "$yn" in
+              y|Y) ;;
+              *) break ;;
+            esac
+          done
+          ;;
         q|Q) exit 0 ;;
         *) echo "无效选择，请重试。" ;;
       esac
@@ -117,9 +151,10 @@ case "$MODE" in
     run_app train "${EXTRA_ARGS[@]}" ;;
   recognize-3)
     run_app recognize-3 "${EXTRA_ARGS[@]}" ;;
+  recognize-1)
+    run_app recognize-1 "${EXTRA_ARGS[@]}" ;;
   all)
-    run_app record-templates --count 3 --sr 16000 --duration 1.0 && \
+    run_app record-templates --count 3 --sr 16000 && \
     run_app train && \
     run_app recognize-3 --sr 16000 --max-seconds 5 ;;
 esac
-

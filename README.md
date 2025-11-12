@@ -1,106 +1,58 @@
-# 音频数字识别（0-9，自录模板 + 连读三位数识别）
+# 语音数字识别（自录模板 + 一次性读三位）
 
-本项目提供两个模式：
-- 输入模式（模板录制）：用户依次录制数字 0-9 的语音样本，作为个性化模板。
-- 识别模式（连续三位）：用户连续说三个数字（中间留短暂停顿），程序自动分段并识别三位数字。
+最简洁的交互式小工具：录制你自己的 0-9 模板后，一次性读出三位数字（手动开始/结束），程序自动切段并识别。
 
-不依赖大型框架，使用 Numpy 自实现 MFCC 与简单最近质心分类器；录音依赖 `sounddevice`。
+实现纯依赖 Numpy（MFCC + 简易解码），录音依赖 `sounddevice`。
 
-## 环境准备
+## 运行
 
-- Python 3.8+
-- 依赖安装（离线网络也可先准备好轮子包）：
+方式一：使用启动脚本（推荐）
 
-```
-pip install -r requirements.txt
-```
+- 创建虚拟环境、安装依赖并进入菜单：
+  - `bash bootstrap.sh menu`
 
-requirements.txt 内容很精简：
-- numpy
-- sounddevice
+方式二：手动安装后运行
 
-如果无法安装/没有麦克风，本项目也支持从 `wav` 文件离线处理（见高级用法）。
+- `pip install -r requirements.txt`
+- `python -m src.app <subcommand>`
 
-## 目录结构
+首次使用建议步骤
 
-```
-.
-├── README.md
-├── requirements.txt
-├── src/
-│   ├── app.py                 # 命令行入口
-│   ├── audio_utils.py         # 录音/读写 wav
-│   ├── features.py            # MFCC 提取（纯 numpy 实现）
-│   ├── segment.py             # 基于短时能量+静音检测的分段
-│   ├── dataset.py             # 样本集管理、特征提取
-│   └── model.py               # 简单最近质心分类器
-├── data/
-│   └── raw/                   # 录制原始音频：data/raw/<digit>/sample_*.wav
-└── models/
-    └── centroids.npz          # 训练后保存的类别质心
-```
+- 菜单 1：录制模板 0-9（每类 3 条起）
+- 菜单 3：训练模型
+- 菜单 4：一次性读三位（手动开始/结束，默认 DTW 分类）
 
-## 快速上手
+## 一次性读 “4 5 6” 示例
 
-1) 录制模板（每个数字默认录 3 次，可自定义）：
-```
-python -m src.app record-templates --count 3 --sr 16000 --duration 1.0
-```
-按提示依次录 0-9。建议安静环境，清晰朗读，每次之间自然停顿。
-
-2) 训练模型（根据已录制样本计算每类质心）：
-```
-python -m src.app train
-```
-成功后在 `models/centroids.npz` 生成模型文件。
-
-3) 连续三位数字识别：
-```
-python -m src.app recognize-3 --sr 16000 --max-seconds 5
-```
-提示音后请在 5 秒内说三位数字（中间留短暂停顿，如“3 … 1 … 4”）。程序会自动分段并输出识别结果，例如：
-```
-识别结果：3 1 4
-```
-
-## 一键运行（自动创建虚拟环境）
-
-无需手动安装依赖，使用 bash 启动脚本：
+1. 启动菜单：`bash bootstrap.sh menu`
+2. 选择 `4) 一次性读三位（手动，DTW 模式）`
+3. 按提示操作：
 
 ```
-bash bootstrap.sh menu
+按回车开始，一次性读出三个数字，读完再按回车结束…
+（按回车开始）
+（读：4 5 6）
+（按回车结束）
+识别结果： 4 5 6
+是否继续识别该模式？[y/N]:
 ```
 
-或直接走全流程（录制→训练→识别）：
+提示
+
+- 录制和识别时保持环境安静、音量均匀；相邻数字之间留 200–300ms 短暂停顿更稳。
+- 若某个数字易混淆，可用菜单 2 “录制某一数字”补充样本，再训练（菜单 3）。
+
+## 目录
 
 ```
-bash bootstrap.sh all
+src/            # 源码（录音、MFCC、分段、解码、CLI）
+data/raw/       # 你的原始录音数据（可提交到 Git）
+models/         # 训练得到的模型文件（可提交到 Git）
+bootstrap.sh    # 启动脚本（推荐）
+requirements.txt
 ```
-
-说明：脚本会在项目根目录创建 `.venv` 虚拟环境，并安装 `requirements.txt` 后调用 `src.app`。
 
 ## 常见问题
 
-- 无法导入 sounddevice：
-  - 请安装依赖，或检查系统麦克风权限；Linux 需要 `alsa/pulseaudio`，Windows 需启用录音设备。
-- 识别率不理想：
-  - 录制模板时尽量统一音量、语速；
-  - 每个数字多录几条（比如 5-10 条），再 `train`；
-  - 识别时每个数字之间留出短暂停顿（>200ms）。
-- 想用已有 wav 文件：
-  - 将 `wav` 放到 `data/raw/<digit>/` 目录后，直接运行 `train`；文件采样率建议 16k 单声道。
-
-## 高级用法
-
-- 自定义 MFCC 维度与帧设置：
-```
-python -m src.app train --n_mfcc 13 --frame_ms 25 --hop_ms 10
-```
-- 仅录音不保存、快速测试：
-```
-python -m src.app record-once --sr 16000 --duration 1.0
-```
-
-## 免责声明
-
-该项目为教学/演示用途，算法简洁，不能保证在嘈杂环境、高速连读情况下的高准确率。
+- 初次运行报 PortAudio not found：Linux 安装 `libportaudio2`（可选 `portaudio19-dev`）。
+- 无法录音：检查系统麦克风权限，或确认设备是否可用。

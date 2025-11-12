@@ -29,8 +29,5 @@ ENV/
 .DS_Store
 Thumbs.db
 
-# Project data/models/tmp (generated)
-data/
-models/
+# Project temp files
 tmp/
-

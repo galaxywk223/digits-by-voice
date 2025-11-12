@@ -74,7 +74,8 @@ def record_audio_manual(sr: int = 16000) -> np.ndarray:
             f"导入失败信息：{e}"
         )
 
-    input("按回车开始录音，录完后再按回车结束…")
+    # Caller prints the start prompt; just wait for Enter
+    input()
     play_audio(beep(sr))
 
     chunks = []
@@ -87,7 +88,8 @@ def record_audio_manual(sr: int = 16000) -> np.ndarray:
 
     with sd.InputStream(samplerate=sr, channels=1, dtype="float32", callback=callback):
         try:
-            input("录音中… 按回车结束。")
+            print("录音中… 按回车结束。")
+            input()
         except KeyboardInterrupt:
             pass
 
