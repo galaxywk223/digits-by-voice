@@ -63,6 +63,22 @@ python -m src.app recognize-3 --sr 16000 --max-seconds 5
 识别结果：3 1 4
 ```
 
+## 一键运行（自动创建虚拟环境）
+
+无需手动安装依赖，使用 bash 启动脚本：
+
+```
+bash bootstrap.sh menu
+```
+
+或直接走全流程（录制→训练→识别）：
+
+```
+bash bootstrap.sh all
+```
+
+说明：脚本会在项目根目录创建 `.venv` 虚拟环境，并安装 `requirements.txt` 后调用 `src.app`。
+
 ## 常见问题
 
 - 无法导入 sounddevice：
@@ -88,4 +104,3 @@ python -m src.app record-once --sr 16000 --duration 1.0
 ## 免责声明
 
 该项目为教学/演示用途，算法简洁，不能保证在嘈杂环境、高速连读情况下的高准确率。
-

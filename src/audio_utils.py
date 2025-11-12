@@ -61,6 +61,42 @@ def record_audio(seconds: float, sr: int = 16000) -> np.ndarray:
     return audio[:, 0]
 
 
+def record_audio_manual(sr: int = 16000) -> np.ndarray:
+    """
+    Interactive recording: press Enter to start, press Enter again to stop.
+    Uses sounddevice InputStream with a callback to collect audio chunks.
+    """
+    try:
+        import sounddevice as sd
+    except Exception as e:
+        raise RuntimeError(
+            "需要安装 sounddevice 才能录音：pip install sounddevice\n"
+            f"导入失败信息：{e}"
+        )
+
+    input("按回车开始录音，录完后再按回车结束…")
+    play_audio(beep(sr))
+
+    chunks = []
+
+    def callback(indata, frames, time_info, status):  # noqa: D401 unused
+        if status:
+            # 丢弃状态不做打印，避免刷屏
+            pass
+        chunks.append(indata.copy())
+
+    with sd.InputStream(samplerate=sr, channels=1, dtype="float32", callback=callback):
+        try:
+            input("录音中… 按回车结束。")
+        except KeyboardInterrupt:
+            pass
+
+    if not chunks:
+        return np.zeros((0,), dtype=np.float32)
+    data = np.concatenate(chunks, axis=0)[:, 0]
+    return data.astype(np.float32)
+
+
 def beep(sr: int = 16000, freq: float = 880.0, dur: float = 0.15) -> np.ndarray:
     t = np.arange(int(sr * dur)) / sr
     return 0.2 * np.sin(2 * np.pi * freq * t).astype(np.float32)
@@ -87,4 +123,3 @@ def countdown(seconds: float = 0.8) -> None:
         time.sleep(0.1)
     sys.stdout.write("\r开始！             \n")
     sys.stdout.flush()
-
