@@ -1,0 +1,36 @@
+# Python artifacts
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+
+# Build/dist
+build/
+dist/
+*.egg-info/
+
+# Virtual environments
+.env
+.venv/
+venv/
+ENV/
+
+# Logs
+*.log
+
+# IDE/editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project data/models/tmp (generated)
+data/
+models/
+tmp/
+
